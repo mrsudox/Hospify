@@ -85,7 +85,7 @@ function calculateTotalAdditionalCharges($additionalChargesJSON)
     }
 
     // Return the total amount with 2 decimal points
-    return number_format($totalAmount, 2);
+    return $result = number_format($totalAmount, 2, '.', '');
 }
 
 
@@ -120,6 +120,17 @@ function generateBookingsTableForCustomer($customer_id, $conn)
 
     while ($row = $result->fetch_assoc()) {
         $balance_to_pay = $row['total_cost'] - $row['discount'] + calculateTotalAdditionalCharges($row['additional_charges']) - $row['paid_amount'];
+
+
+// Calculate total cash_in and cash_out for the booking
+        $totalCashIn = getTotalCashIn($conn, 'hotel', $row['booking_id']);
+        $totalCashOut = getTotalCashOut($conn, 'hotel', $row['booking_id']);
+
+        // Calculate net balance to pay by adding cash_out and subtracting cash_in
+        $balance_to_pay = $balance_to_pay + $totalCashOut - $totalCashIn;
+
+
+        
 
         echo '
                     <tr>
@@ -337,7 +348,94 @@ function displayCashOutTable($conn, $addedFrom, $alternateId) {
 
 
 
+function calculateTotalNetBalanceToPay($customer_id, $conn)
+{
+    // Fetch bookings with customer names from the database
+    $query = "SELECT bookings.*, customers.full_name
+              FROM bookings
+              JOIN customers ON bookings.customer_id = customers.customer_id
+              WHERE bookings.customer_id = $customer_id
+              ORDER BY bookings.booking_id DESC";
+
+    $result = $conn->query($query);
+
+    $totalNetBalance = 0;
+
+    while ($row = $result->fetch_assoc()) {
+        //echo calculateTotalAdditionalCharges($row['additional_charges']);
+        // Calculate balance to pay as per your existing logic
+        $balance_to_pay = $row['total_cost'] - $row['discount'] + calculateTotalAdditionalCharges($row['additional_charges']) - $row['paid_amount'];
+
+        // Calculate total cash_in and cash_out for the booking
+        $totalCashIn = getTotalCashIn($conn, 'hotel', $row['booking_id']);
+        $totalCashOut = getTotalCashOut($conn, 'hotel', $row['booking_id']);
+
+        // Calculate net balance to pay by adding cash_out and subtracting cash_in
+        $netBalance = $balance_to_pay + $totalCashOut - $totalCashIn;
+
+        // Add the net balance to the total
+        $totalNetBalance += $netBalance;
+    }
+
+    return $totalNetBalance;
+}
 
 
 
+
+// Include or require your necessary files and functions
+
+// Function to update additional charges
+function updateAdditionalCharges($conn, $bookingId, $grandTotal, $description) {
+    // Get the existing additional charges from the database
+    $existingChargesJson = getAdditionalChargesFromDatabase($conn, $bookingId);
+
+    // Decode the existing JSON data
+    $existingCharges = json_decode($existingChargesJson, true);
+
+    // Create a new charge entry
+    $newCharge = array(
+        "timestamp" => date("Y-m-d H:i:s"),
+        "value" => $grandTotal,
+        "desc" => htmlspecialchars($description), // Convert special characters to HTML entities
+        "added_from" => "hotel",
+        "added_by" => getCurrentUserInfo() // Assuming getUserInfo returns the needed information
+    );
+
+    // Add the new charge to the existing charges
+    $existingCharges[] = $newCharge;
+
+    // Encode the updated charges back to JSON
+    $updatedChargesJson = json_encode($existingCharges);
+
+    // Update the additional_charges column in the bookings table
+    updateAdditionalChargesInDatabase($conn, $bookingId, $updatedChargesJson);
+
+    // Return a success message or any other relevant data
+    return array("status" => "success", "message" => "Additional charges updated successfully");
+}
+
+// Function to get additional charges from the database based on booking ID
+function getAdditionalChargesFromDatabase($conn, $bookingId) {
+    // Implement your database query here to retrieve additional charges based on the booking ID
+    // Return the additional charges JSON data from the database
+    // Example query:
+    $query = "SELECT additional_charges FROM bookings WHERE booking_id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("i", $bookingId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    return $row['additional_charges'];
+}
+
+// Function to update additional charges in the database based on booking ID and new JSON data
+function updateAdditionalChargesInDatabase($conn, $bookingId, $updatedChargesJson) {
+    // Implement your database query here to update the additional_charges column based on the booking ID
+    // Example query:
+    $query = "UPDATE bookings SET additional_charges = ? WHERE booking_id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("si", $updatedChargesJson, $bookingId);
+    $stmt->execute();
+}
 ?>

@@ -10,7 +10,9 @@ include "header.php";
 
 
 
-
+<input id="__total" type="" name="__total" value="" hidden>
+<input id="__grand_total" type="" name="__grand_total" value="" hidden>
+<input id="__discount" type="" name="__discount" value="" hidden>
 
 
 
@@ -78,8 +80,8 @@ while ($row = mysqli_fetch_assoc($result)) {
             <div id="pos-bill"></div>
 
             <!-- Total Amount with inline CSS -->
-            <div id="total-amount" style="font-size: 1rem;">Total: 0.00</div>
-            <div id="discount-amount-div" style="font-size: 1rem;">Discount: 0.00</div>
+            <div class="d-inline" id="total-amount" style="font-size: 1rem;">Total: 0.00</div><span> | </span>
+<div class="d-inline" id="discount-amount-div" style="font-size: 1rem;">Discount: 0.00</div><br>
             <input type="number" id="discount-amount-input" value="0" name="discount-amount-input"><button class="btn btn-secondary py-1 ml-1" id="discount-add-btn">add discount</button>
             <!-- Total Amount with inline CSS -->
             <div id="grand-total-amount" style="font-size: 3rem; color: #28a745; margin-bottom: 0.1rem;">Total: 0.00</div>
@@ -108,7 +110,7 @@ while ($row = mysqli_fetch_assoc($result)) {
             <div class="modal-body">
                 <div class="form-group">
                     <label for="quantity">Quantity</label>
-                    <input type="text" class="form-control" id="quantity" style="font-size: 2rem; text-align: center;">
+                    <input type="number" min="0" pattern="[0-9]*" inputmode="numeric" class="form-control" id="quantity" style="font-size: 2rem; text-align: center;" autofocus>
                 </div>
                 <div class="calculator-buttons">
                     <button class="btn btn-secondary m-1 px-4 btn-quantity" style="flex: 1; font-size: 3rem;">1</button>
@@ -152,16 +154,10 @@ while ($row = mysqli_fetch_assoc($result)) {
 <div class="modal fade" id="cashInputModal" tabindex="-1" role="dialog" aria-labelledby="cashInputModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="cashInputModalLabel">Enter Cash Amount</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label for="cash-amount">Cash Amount:</label>
-                    <input type="text" class="form-control" placeholder="Enter Cash Received" id="cash-amount" style="font-size: 2rem; text-align: center;" autofocus>
+                    <input type="number" min="0" pattern="[0-9]*" inputmode="numeric" class="form-control" placeholder="Enter Cash Received" id="cash-amount" style="font-size: 2rem; text-align: center;" autofocus>
                 </div>
 
                 <div class="calculator-buttons">
@@ -195,7 +191,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                 <button id="print_btn" type="button" class="btn btn-success" onclick="printBill()">
     <i class="fas fa-print"></i> Print
 </button>
-                <button id="reloadButton" style="flex: 1"; type="button" class="btn btn-info " id="new-sale-btn"><i class="fas fa-plus"></i> Add New Sale</button>
+                <button id="reloadButton" style="flex: 1"; type="button" class="btn btn-secondary " id="new-sale-btn"> Close</button>
             </div>
         </div>
     </div>
@@ -203,25 +199,15 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 
 
-<!-- Bootstrap Modal -->
+<!--  Modal  for hotel customer-->
 <div class="modal fade" id="hotelCustomerModal" tabindex="-1" role="dialog" aria-labelledby="hotelCustomerModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="hotelCustomerModalLabel">Add to Hotel Customer</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <form id="hotelCustomerForm">
-          <div class="form-group">
 
-          </div>
-          <div class="form-group">
-            <label for="totalAmount">Total Amount</label>
-            <input type="text" class="form-control" id="customers-modal-total-amount" name="totalAmount" readonly>
-          </div>
+      <div class="modal-body">
+        <div id="customer_details"></div>
+        <form id="hotelCustomerForm">
+
         </form>
       </div>
       <div class="modal-footer">
@@ -234,11 +220,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 
 
-<script>
-
-
 <?php
-// Assume $conn is your database connection
 $result = mysqli_query($conn, "SELECT * FROM menu_items");
 $menuItems = [];
 
@@ -247,85 +229,19 @@ while ($row = mysqli_fetch_assoc($result)) {
         'menu_id' => $row['menu_id'],
         'item_name' => $row['item_name'],
         'unit' => $row['unit'],
-        'price' => floatval($row['price']) // Ensure the price is treated as a float
+        'price' => floatval($row['price'])
     ];
 
     $menuItems[] = $menuItem;
 }
-
 ?>
 
-$(document).ready(function () {
-    var selectedItemId;
-    var menuItems = <?php echo json_encode($menuItems, JSON_HEX_QUOT | JSON_HEX_TAG); ?>;
+<script>
+var menuItems = <?php echo json_encode($menuItems, JSON_HEX_QUOT | JSON_HEX_TAG); ?>;
 
-console.log(menuItems);
-
-    // Handle 'Add' button click to open the modal
-    $('.btn-add-item').on('click', function () {
-        selectedItemId = $(this).data('item-id');
-        $('#quantity').val(''); // Reset the quantity input
-    });
-
-    // Handle quantity button click in the modal
-    $('.btn-quantity').on('click', function () {
-        var currentQuantity = $('#quantity').val();
-        var digit = $(this).text();
-        $('#quantity').val(currentQuantity + digit);
-    });
-
-     // Handle quantity button click in the modal
-    $('.btn-cash-amount').on('click', function () {
-        var currentAmount = $('#cash-amount').val();
-        var digit = $(this).text();
-        $('#cash-amount').val(currentAmount + digit);
-    });
-
-
-    // Handle 'Proceed' button click in the modal
-    $('.btn-proceed').on('click', function () {
-        var quantity = $('#quantity').val();
-
-        // Check if quantity is entered
-        if (quantity !== '') {
-            // Generate the item description using the formula
-            var itemDescription = generateItemDescription(selectedItemId, quantity);
-
-// Append the item to the POS bill form
-$('#pos-bill-form').append(
-    '<div class="row pos-item" style="margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">' +
-    '<div class="col-md-8 itemDescription">' + itemDescription + '</div>' +
-    '<div class="col-md-2"><button class="btn btn-danger button-sm px-1 btn-delete-item" style="padding: 0px;">delete</button></div>' +
-    '</div>'
-);
-
-
-            // Calculate and update the total
-            updateTotal();
-            updateGrandTotal();
-
-            // Close the modal
-            $('#addItemModal').modal('hide');
-        }
-    });
-
-    // Handle delete button click for dynamically added items
-    $('#pos-bill-form').on('click', '.btn-delete-item', function () {
-        $(this).closest('.pos-item').remove();
-        updateTotal();
-        updateGrandTotal();
-    });
-
-
-
-// Function to generate item description using the formula
-// Function to generate item description using the formula
 function generateItemDescription(itemId, quantity) {
-    // You need to fetch item details from the server based on itemId
-    // For now, let's assume you have a global variable 'menuItems' containing item details
-    var selectedItem = menuItems.find(item => item.menu_id == itemId); // Use == for loose comparison
+    var selectedItem = menuItems.find(item => item.menu_id == itemId);
 
-    // Check if the item is found
     if (selectedItem) {
         var lineAmount = quantity * selectedItem.price;
         return selectedItem.item_name + ' - ' + quantity + ' (' + selectedItem.unit + ') X ' + selectedItem.price + ' = ' + lineAmount.toFixed(2);
@@ -333,167 +249,268 @@ function generateItemDescription(itemId, quantity) {
         return '';
     }
 }
-$('#discount-add-btn').on('click', function (event) {
-            // Prevent the default behavior of the button (e.g., form submission)
-            event.preventDefault();
 
-            // Call the updateGrandTotal function
-            updateGrandTotal();
-        });
+function getTotal() {
+    updateTotal();
+    return $('#__total').val();
+}
 
-    // Function to update the total in real-time
-    function updateGrandTotal() {
-        var totalAmount = parseFloat($('#total-amount').text().replace('Total: ', ''));
-        console.log(totalAmount);
-        var discountAmount = parseFloat($('#discount-amount-input').val());
-        console.log(discountAmount);
-        var grandTotal = totalAmount - discountAmount;
-        console.log(grandTotal);
+function getGrandTotal() {
+    return $('#__grand_total').val();
+}
 
-        // Update the total in the UI
-        $('#grand-total-amount').text('Total: ' + grandTotal.toFixed(2));
-        $('#discount-amount-div').text('Discount: ' + discountAmount.toFixed(2));
-    }
+function getDiscount() {
+    return $('#__discount').val();
+}
 
-    // Function to update the total in real-time
-    function updateTotal() {
-        var total = 0;
-        $('.pos-item').each(function () {
-            var itemText = $(this).find('.itemDescription').text();
-            var itemPrice = parseFloat(itemText.match(/[\d\.]+$/)[0]);
-            total += itemPrice;
-        });
-
-        // Update the total in the UI
-        $('#total-amount').text('Total: ' + total.toFixed(2));
-    }
-
-    // Function to handle the payment (placeholder for your actual implementation)
-    function handlePayment() {
-        // Submit the POS bill form (placeholder for your actual implementation)
-        $('#pos-bill-form').submit();
-    }
-});
-
-
-// Handle 'Pay Now' button click
-$('#btn-pay-now').on('click', function () {
-    // Display the cash input modal
-    $('#cashInputModal').modal('show');
-    var pay_modal_total_amount = $('#grand-total-amount').text();
-    
-        $('#pay-modal-total-amount').text(pay_modal_total_amount);
-        $('#cash-amount').focus();
-});
-
-// Handle 'Pay' button click inside the cash input modal
-$('#btn-pay').on('click', function () {
-    // Get the entered cash amount
-    var cashAmount = parseFloat($('#cash-amount').val());
-
-    // Get the total amount from the POS bill
-    var totalAmount = parseFloat($('#grand-total-amount').text().replace('Total: ', ''));
-
-    // Validate if the cash amount is sufficient
-    if (cashAmount < totalAmount) {
-        // Display an error message in the modal
-        $('#payment-error').text('Error: Insufficient cash amount. Please enter a valid amount.');
+function updateDiscount() {
+    var discountAmount = parseFloat($('#discount-amount-input').val());
+    if ((discountAmount !== '') && (discountAmount > -1) && (!isNaN(discountAmount))) {
+        $('#__discount').val(discountAmount);
+        $('#discount-amount-div').text('Discount: ' + discountAmount.toFixed(2));  
     } else {
-        // Calculate change
-        var change = cashAmount - totalAmount;
-        var discount__amount = $('#discount-amount-div').text();
-        console.log("discount__amount:"+ discount__amount);
-        // Get the merged description
-        var mergedDesc = getMergedDescription(discount__amount);
+            alert("Please Enter Valid Discount");
+        }
+    
+}
 
-// Assuming you have a function to handle the payment through AJAX
-$.ajax({
-    url: 'api.php?type=restaurant_pos_sale',
-    type: 'GET',
-    data: { totalAmount: totalAmount, mergedDesc: mergedDesc },
-    success: function (response) {
-        // Display success message in the modal
-        $('#payment-success').text(response);
+function updateGrandTotal() {
+    var totalAmount = getTotal();
+    var discountAmount = getDiscount();
+    var grandTotal = totalAmount - discountAmount;
 
-        // Display change in the modal
-        $('#change-amount').text('Return: ' + change.toFixed(2));
+    $('#__grand_total').val(grandTotal.toFixed(2));
+    $('#grand-total-amount').text('Total: ' + grandTotal.toFixed(2));
+}
 
-        // Show the 'Print' and 'Add New Sale' buttons
-        // Change the display property to 'block' for the element with class .print-btn-div
-$('.print-btn-div').show();
-$('.pay-btn-div').hide();
-
-    },
-    error: function (xhr, status, error) {
-        // Display error message in the modal
-        $('#payment-error').text('Error: ' + xhr.responseText);
-    }
-});
-
-    }
-});
-
- $(document).ready(function () {
-        // Attach click event to the button
-        $('#reloadButton').on('click', function () {
-            // Reload the page
-            location.reload();
-        });
-        
+function updateTotal() {
+    var total = 0;
+    $('.pos-item').each(function () {
+        var itemText = $(this).find('.itemDescription').text();
+        var itemPrice = parseFloat(itemText.match(/[\d\.]+$/)[0]);
+        total += itemPrice;
     });
 
-// Function to get the merged description from POS bill items
-function getMergedDescription(discount__amount) {
-    var mergedDesc = '';
+    $('#__total').val(total.toFixed(2));
+    $('#total-amount').text('Total: ' + total.toFixed(2));
+}
 
+
+
+function getMergedDescription() {
+    var mergedDesc = '';
     $('.pos-item .itemDescription').each(function () {
         mergedDesc += $(this).text() + ', ';
     });
-
-    // Add the discounted amount at the end of the description
-    mergedDesc +=  discount__amount;
-
-    // Remove the trailing comma and space
+    var discount__amount = $('#discount-amount-div').text();
+    mergedDesc += discount__amount;
     mergedDesc = mergedDesc.slice(0, -2);
 
     return mergedDesc;
 }
 
-
 function printBill() {
-    // Open a new window with a fixed size
     var printWindow = window.open('api.php?type=restaurant_pos_bill_print', '_blank', 'width=500,height=700');
-
-    // Add an onload event to the new window
     printWindow.onload = function () {
-        // Print the contents of the new window
         printWindow.print();
-
-        // Close the window after printing
         printWindow.close();
     };
 }
 
+function cashInputButtonPay() {
+    var cashAmount = parseFloat($('#cash-amount').val());
+    var totalAmount = getGrandTotal();
 
-  $(document).ready(function() {
-    // Button click event
-    $("#btn-add-to-hotel-customer").click(function() {
-    	$('#hotelCustomerModal').modal('show');
-    	
+    if ((cashAmount < totalAmount) || (cashAmount == '') || (cashAmount < 0) || (isNaN(cashAmount))) {
+        alert("Error: Insufficient cash amount. Please enter a valid amount.");
+    } else {
+        var change = cashAmount - totalAmount;
+        var mergedDesc = getMergedDescription();
 
+        $.ajax({
+            url: 'api.php?type=restaurant_pos_sale',
+            type: 'GET',
+            data: { totalAmount: totalAmount, mergedDesc: mergedDesc },
+            success: function (response) {
+                $('#payment-success').text(response);
+                $('#change-amount').text('Return: ' + change.toFixed(2));
+                $('.print-btn-div').show();
+                $('.pay-btn-div').hide();
+            },
+            error: function (xhr, status, error) {
+                $('#payment-error').text('Error: ' + xhr.responseText);
+            }
+        });
+    }
+}
+
+function getHotelCustomerProfile(customerNameID, callback) {
+
+var description = getMergedDescription();
+var grandTotal = getGrandTotal();
+
+
+    $.ajax({
+        url: 'api.php?type=getHotelCustomerProfile&customer_id=' + customerNameID,
+        type: 'GET',
+        dataType: 'json',
+        success: function (data) {
+            $("#hotelCustomerForm").html("");
+
+            // Append input fields with labels to the form
+            $('#hotelCustomerForm').append('<div class="form-group"><label for="customerName">Customer Name</label><input type="text" class="form-control" id="customerName_" name="customerName" value="' + data.full_name + '" readonly></div>');
+            $('#hotelCustomerForm').append('<div class="form-group"><label for="phoneNo">Phone No</label><input type="text" class="form-control" id="phoneNo_" name="phoneNo" value="' + data.phone_number + '" readonly></div>');
+            $('#hotelCustomerForm').append('<div class="form-group"><label for="dueBalance">Due Balance</label><input type="text" class="form-control" id="dueBalance_" name="dueBalance" value="' + data.total_net_balance + '" readonly></div>');
+            $('#hotelCustomerForm').append('<div class="form-group"><label for="latestBookingId">Latest Booking Id</label><input type="text" class="form-control" id="latestBookingId_" name="latestBookingId" value="' + data.current_booking_id + '" readonly></div>');
+            $('#hotelCustomerForm').append('<div class="form-group"><label for="totalThisBillAmount">Total This Bill Amount</label><input type="text" class="form-control" id="totalThisBillAmount_" name="totalThisBillAmount" value="' + grandTotal + '" readonly></div>');
+            $('#hotelCustomerForm').append('<div class="form-group"><label for="billDesc">Description</label><input type="text" class="form-control" id="billDesc_" name="billDesc" value="' + description + '" readonly></div>');
+
+            callback();
+        },
+        error: function (xhr, status, error) {
+            // Call the callback function with an error
+            callback(error);
+        }
+    });
+}
+
+
+function updateAdditionalCharges() {
+    // Serialize the form data
+    var formData = $('#hotelCustomerForm').serialize();
+
+    // AJAX request to update additional charges using POST method
+    $.ajax({
+        url: 'api.php?type=updateAdditionalCharges',
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function (response) {
+            // Handle success response
+            console.log('Update Successful:', response);
+
+            // Show success alert
+            alert(response.message);
+
+            // Refresh the page only if the status is success
+            if (response.status === 'success') {
+                location.reload();
+            }
+        },
+        error: function (xhr, status, error) {
+            // Handle error response
+            console.error('Update Failed:', error);
+
+            // Show error alert
+            alert('Update Failed: ' + error.statusText);
+        }
+    });
+}
+
+
+
+
+
+
+$(document).ready(function () {
+    var selectedItemId;
+
+    $('.btn-add-item').on('click', function () {
+        selectedItemId = $(this).data('item-id');
+        $('#quantity').val('');
     });
 
-    // Update button click event
-    $("#updateBtn").click(function() {
-      // Add your code to handle the update logic
-      // You can get the selected customer ID and total amount using $('#customerName').val() and $('#totalAmount').val()
+    $('.btn-quantity').on('click', function () {
+        var currentQuantity = $('#quantity').val();
+        var digit = $(this).text();
+        $('#quantity').val(currentQuantity + digit);
     });
-  });
 
+    $('.btn-cash-amount').on('click', function () {
+        var currentAmount = $('#cash-amount').val();
+        var digit = $(this).text();
+        $('#cash-amount').val(currentAmount + digit);
+    });
 
+    $('.btn-proceed').on('click', function () {
+        var quantity = $('#quantity').val();
 
+        if ((quantity !== '') && (quantity > 0) && (!isNaN(quantity))) {
+            var itemDescription = generateItemDescription(selectedItemId, quantity);
+            $('#pos-bill-form').append(
+                '<div class="row pos-item" style="margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">' +
+                '<div class="col-md-8 itemDescription">' + itemDescription + '</div>' +
+                '<div class="col-md-2"><button class="btn btn-danger button-sm px-1 btn-delete-item" style="padding: 0px;">delete</button></div>' +
+                '</div>'
+            );
 
+            updateGrandTotal();
+            $('#addItemModal').modal('hide');
+        } else {
+            alert("Please Enter Valid Quantity");
+        }
+    });
+
+    $('#pos-bill-form').on('click', '.btn-delete-item', function () {
+        $(this).closest('.pos-item').remove();
+        updateTotal();
+        updateGrandTotal();
+    });
+
+    $('#discount-add-btn').on('click', function (event) {
+        event.preventDefault();
+        updateDiscount();
+        updateGrandTotal();
+    });
+
+    $('#btn-pay-now').on('click', function () {
+
+        var total_amount = getGrandTotal();
+        if ((total_amount !== '') && (total_amount > 0) && (!isNaN(total_amount))) {
+            $('#cashInputModal').modal('show');
+            var pay_modal_total_amount = $('#grand-total-amount').text();
+            $('#pay-modal-total-amount').text(pay_modal_total_amount);
+            $('#cash-amount').focus();
+        
+        } else {
+            alert("Please Check Entry: Total amount should not be less than 0(zero)");
+        }
+
+        
+    });
+
+    $('#reloadButton').on('click', function () {
+        location.reload();
+    });
+
+    $("#btn-add-to-hotel-customer").click(function () {
+        var customerNameID = $("#customerName").val();
+
+        if (customerNameID > 0) {
+
+            $('#hotelCustomerModal').modal('show');
+            getHotelCustomerProfile(customerNameID, function (result, error) {
+    if (error) {
+        alert('Error:', error);
+    }
+});
+            
+        } else {
+            alert("Please Select Hotel Customer");
+        }
+    });
+
+    $("#updateBtn").click(function () {
+        updateAdditionalCharges();
+        
+    });
+
+    $('#btn-pay').on('click', function () {
+        cashInputButtonPay();
+    });
+});
 </script>
+
 
 
 

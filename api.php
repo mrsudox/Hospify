@@ -435,6 +435,109 @@ if (isset($_GET['type']) && $_GET['type'] === 'hotel_customer_options') {
 } 
 
 
+
+
+
+if ((isset($_GET['type'])) && ($_GET['type'] === 'getHotelCustomerProfile')) {
+    // Check if the 'customer_id' parameter is set
+    if (isset($_GET['customer_id'])) {
+        $customer_id = $_GET['customer_id'];
+
+        // Perform your database query to get customer profile data
+        // Fetch only 'full_name' and 'phone_number'
+        $query = "SELECT full_name, phone_number FROM customers WHERE customer_id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $customer_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        // Check if the customer exists
+        if ($result->num_rows > 0) {
+            // Fetch customer data
+            $customer = $result->fetch_assoc();
+
+            // Calculate total net due balance
+            $totalNetBalance = calculateTotalNetBalanceToPay($customer_id, $conn);
+
+            // Add 'total_net_balance' to the customer data
+            $customer['total_net_balance'] = $totalNetBalance;
+
+            // Fetch latest booking_id for the customer
+            $latestBookingQuery = "SELECT booking_id FROM bookings WHERE customer_id = ? ORDER BY booking_id DESC LIMIT 1";
+            $stmtLatestBooking = $conn->prepare($latestBookingQuery);
+            $stmtLatestBooking->bind_param("i", $customer_id);
+            $stmtLatestBooking->execute();
+            $resultLatestBooking = $stmtLatestBooking->get_result();
+
+            if ($resultLatestBooking->num_rows > 0) {
+                $latestBooking = $resultLatestBooking->fetch_assoc();
+                // Add 'current_booking_id' to the customer data
+                $customer['current_booking_id'] = $latestBooking['booking_id'];
+            } else {
+                // No bookings found
+                $customer['current_booking_id'] = null;
+            }
+
+            // Return customer data as JSON
+            header('Content-Type: application/json');
+            echo json_encode($customer);
+        } else {
+            // Customer not found
+            echo json_encode(['error' => 'Customer not found']);
+        }
+
+        // Close the statements
+        $stmt->close();
+        $stmtLatestBooking->close();
+    } else {
+        // 'customer_id' parameter is missing
+        echo json_encode(['error' => 'Missing customer_id parameter']);
+    }
+}
+
+
+
+
+// Main API logic
+if (isset($_GET['type']) && $_GET['type'] === 'updateAdditionalCharges') {
+    // Include your necessary files and functions, including db.php
+    // Example: include 'db.php';
+
+    // Assuming $conn is defined in db.php
+    // Check if $conn is defined and is a valid connection
+    if (!isset($conn) || $conn->connect_error) {
+        echo json_encode(array("status" => "error", "message" => "Database connection error"));
+        exit;
+    }
+
+    // Validate and sanitize input data
+    $bookingId = isset($_POST['latestBookingId']) ? intval($_POST['latestBookingId']) : null;
+    $grandTotal = isset($_POST['totalThisBillAmount']) ? floatval($_POST['totalThisBillAmount']) : null;
+    $description = isset($_POST['billDesc']) ? htmlspecialchars($_POST['billDesc']) : null;
+
+    
+
+    // Check if required parameters are provided
+    if ($bookingId !== null && $grandTotal !== null && $description !== null) {
+        // Call the function to update additional charges
+        $result = updateAdditionalCharges($conn, $bookingId, $grandTotal, $description);
+
+        // Return the result as JSON
+        echo json_encode($result);
+    } else {
+        // Return an error message if required parameters are missing
+        echo json_encode(array("status" => "error", "message" => "Invalid or missing parameters"));
+    }
+
+    // No need to close the database connection here, as it's done elsewhere in db.php
+}
+
+
+
+
+
+
+
 // Close the database connection
 $conn->close();
 ?>

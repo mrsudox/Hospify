@@ -53,9 +53,7 @@
                 <li class="nav-item">
                     <a class="nav-link" href="restaurant.php">Restaurant</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="bar.php">Bar</a>
-                </li>
+
                 <li class="nav-item">
                     <a class="nav-link" href="reports.php">Reports</a>
                 </li>
